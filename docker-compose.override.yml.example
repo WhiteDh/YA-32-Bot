@@ -1,0 +1,12 @@
+# Local development only — `scripts\dev.bat infra` copies this to docker-compose.override.yml
+# (gitignored). Publishes Postgres to the host so a bot started with `scripts\dev.bat` can reach
+# it at postgresql+asyncpg://ya32:ya32@localhost:5432/ya32, and builds the bot image locally.
+
+services:
+  ya32-db:
+    ports:
+      - "5432:5432"
+
+  ya32-bot:
+    build: .
+    image: ya32-bot:dev

@@ -1,0 +1,53 @@
+name: CI
+
+# CI runs THE SAME command as locally: scripts/gate.py. A pipeline that re-implements
+# the checks drifts from the local one. CD calls this workflow first (workflow_call),
+# so a tag on a red commit never reaches the server.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Python first, then Poetry — otherwise Poetry lands on the runner's system interpreter.
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Cache Poetry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry
+          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+          restore-keys: ${{ runner.os }}-poetry-
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Gate
+        run: python scripts/gate.py --strict
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    needs: gate
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build image (no push)
+        run: docker build -t ya32-bot:ci .

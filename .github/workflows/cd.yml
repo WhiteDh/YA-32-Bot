@@ -1,0 +1,103 @@
+name: CD
+
+# A pushed tag vX.Y.Z is the only thing that deploys:
+#   gate (same as CI) → image to GHCR → compose file to the server → backup → docker compose up.
+#
+# Repository secrets (Settings → Environments → prod):
+#   SERVER_HOST, SERVER_USER, SSH_PRIVATE_KEY   — where to deploy
+#   BOT_TOKEN, OWNER_IDS                        — what the stack needs
+# Optional variables: KPI_GROUP_ID, LOG_LEVEL.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  gate:
+    uses: ./.github/workflows/ci.yml
+
+  build-and-push:
+    needs: gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.names.outputs.image }}
+      version: ${{ steps.names.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Names
+        id: names
+        run: |
+          VERSION=${GITHUB_REF##*/}
+          VERSION=${VERSION#v}
+          IMAGE=ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        run: |
+          IMAGE=${{ steps.names.outputs.image }}
+          VERSION=${{ steps.names.outputs.version }}
+          docker build -t "$IMAGE:$VERSION" -t "$IMAGE:latest" .
+          docker push "$IMAGE:$VERSION"
+          docker push "$IMAGE:latest"
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
+    steps:
+      - name: Checkout compose file only
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: docker-compose.yml
+          sparse-checkout-cone-mode: false
+
+      - name: Copy docker-compose.yml to the server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: docker-compose.yml
+          target: /srv/ya32-bot/
+
+      - name: Backup, then deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /srv/ya32-bot
+            echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
+
+            export YA32_IMAGE='${{ needs.build-and-push.outputs.image }}'
+            export YA32_VERSION='${{ needs.build-and-push.outputs.version }}'
+            export BOT_TOKEN='${{ secrets.BOT_TOKEN }}'
+            export OWNER_IDS='${{ secrets.OWNER_IDS }}'
+            export KPI_GROUP_ID='${{ vars.KPI_GROUP_ID || '3655' }}'
+            export LOG_LEVEL='${{ vars.LOG_LEVEL || 'INFO' }}'
+
+            # A dump before every deploy; the last 10 are kept. Skipped on the very first deploy.
+            mkdir -p backups
+            if docker ps --format '{{.Names}}' | grep -q '^ya32-db$'; then
+              docker exec ya32-db pg_dump -U ya32 ya32 | gzip > "backups/pre-$YA32_VERSION-$(date +%Y%m%d-%H%M%S).sql.gz"
+              ls -1t backups/*.sql.gz | tail -n +11 | xargs -r rm --
+            fi
+
+            docker compose -p ya32 up -d --pull always
+            docker image prune -f || true

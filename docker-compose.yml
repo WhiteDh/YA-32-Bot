@@ -1,0 +1,82 @@
+# Production stack: the bot + a deliberately tiny PostgreSQL.
+# CD copies this file to /srv/ya32-bot and runs `docker compose -p ya32 up -d`.
+# Locally: `scripts\dev.bat infra` adds docker-compose.override.yml (port 5432 for the host).
+
+services:
+  ya32-db:
+    image: postgres:17-alpine
+    container_name: ya32-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ya32
+      # The database publishes no port: only the bot reaches it, inside this compose network.
+      # So the password is a formality with a default; override POSTGRES_PASSWORD only if you
+      # want to — and then never change it again, it is baked into the volume on first start.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ya32}
+      POSTGRES_DB: ya32
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
+    # The bot is used by ~30 people a few times a day: Postgres is tuned down to
+    # ~25 MB RSS at idle. Every number here is "small but not starving".
+    command:
+      - postgres
+      - -c
+      - shared_buffers=16MB
+      - -c
+      - effective_cache_size=48MB
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=16MB
+      - -c
+      - max_connections=12
+      - -c
+      - wal_buffers=1MB
+      - -c
+      - min_wal_size=32MB
+      - -c
+      - max_wal_size=96MB
+      - -c
+      - max_worker_processes=2
+      - -c
+      - max_parallel_workers=0
+      - -c
+      - max_parallel_workers_per_gather=0
+      - -c
+      - autovacuum_max_workers=1
+      - -c
+      - jit=off
+    volumes:
+      - ya32-db-data:/var/lib/postgresql/data
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ya32 -d ya32"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  ya32-bot:
+    image: ${YA32_IMAGE:-ghcr.io/zebaro24/ya-32-bot}:${YA32_VERSION:-latest}
+    container_name: ya32-bot
+    restart: unless-stopped
+    depends_on:
+      ya32-db:
+        condition: service_healthy
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN:?BOT_TOKEN is required}
+      OWNER_IDS: ${OWNER_IDS:?OWNER_IDS is required}
+      DATABASE_URL: postgresql+asyncpg://ya32:${POSTGRES_PASSWORD:-ya32}@ya32-db:5432/ya32
+      TZ: ${TZ:-Europe/Kyiv}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      KPI_GROUP_ID: ${KPI_GROUP_ID:-3655}
+      RICH_MESSAGES: ${RICH_MESSAGES:-true}
+    mem_limit: 192m
+    # No ports: long polling — the bot reaches out, nothing reaches in.
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  ya32-db-data:
