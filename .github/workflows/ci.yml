@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v5
 
       # Python first, then Poetry — otherwise Poetry lands on the runner's system interpreter.
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
 
