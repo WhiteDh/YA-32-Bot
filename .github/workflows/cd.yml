@@ -27,7 +27,7 @@ jobs:
       image: ${{ steps.names.outputs.image }}
       version: ${{ steps.names.outputs.version }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Names
         id: names
@@ -60,7 +60,7 @@ jobs:
       name: prod
     steps:
       - name: Checkout compose file only
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           sparse-checkout: docker-compose.yml
           sparse-checkout-cone-mode: false

@@ -20,7 +20,7 @@ jobs:
     name: Gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # Python first, then Poetry — otherwise Poetry lands on the runner's system interpreter.
       - uses: actions/setup-python@v6
@@ -48,6 +48,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: gate
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Build image (no push)
         run: docker build -t ya32-bot:ci .
