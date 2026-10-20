@@ -38,6 +38,7 @@ class Prefs(BaseModel):
     rich: bool = True
 
     # ── Сповіщення ────────────────────────────────────────────────────────
+    sound: bool = True  # off = every notification arrives silently
     morning_digest: bool = True
     morning_time: str = "07:30"
     evening_digest: bool = False
@@ -67,7 +68,9 @@ class Prefs(BaseModel):
         return self.model_dump()
 
     def is_quiet(self, moment: time) -> bool:
-        """Inside quiet hours notifications arrive silently (no sound), never dropped."""
+        """Silent when sound is off or inside quiet hours; notifications are never dropped."""
+        if not self.sound:
+            return True
         if not self.quiet_hours:
             return False
         start, end = parse_hhmm(self.quiet_from), parse_hhmm(self.quiet_to)
@@ -94,18 +97,25 @@ VIEW_TOGGLES: tuple[tuple[str, str], ...] = (
     ("rich", "✨ Новий вигляд"),
 )
 
-NOTIFY_TOGGLES: tuple[tuple[str, str], ...] = (
-    ("morning_digest", "🌅 Ранковий розклад"),
-    ("evening_digest", "🌙 Вечірній — на завтра"),
-    ("notify_changes", "🔔 Зміни в розкладі"),
-    ("quiet_hours", "🤫 Тихі години (без звуку)"),
-)
+NOTIFY_TOGGLES: tuple[tuple[str, str], ...] = (("sound", "🔔 Звук сповіщень"),)
 
-# Everything a user can still change. Stored values of any other field are ignored on load,
-# so people who tuned the view earlier get the default look back.
+# Notification values kept from the database. The settings screen only changes sound and the
+# reminder; the rest keep whatever was stored earlier. Any other field (the look) is ignored on load.
 NOTIFY_FIELDS = frozenset(
-    {key for key, _ in NOTIFY_TOGGLES}
-    | {"morning_time", "evening_time", "remind_before", "quiet_from", "quiet_to", "notify_homework", "notify_deadlines"}
+    {
+        "sound",
+        "remind_before",
+        "morning_digest",
+        "morning_time",
+        "evening_digest",
+        "evening_time",
+        "notify_changes",
+        "notify_homework",
+        "notify_deadlines",
+        "quiet_hours",
+        "quiet_from",
+        "quiet_to",
+    }
 )
 
 OTHER_TOGGLES: tuple[tuple[str, str], ...] = (

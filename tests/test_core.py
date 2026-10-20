@@ -97,6 +97,7 @@ def test_prefs_quiet_hours_wrap_midnight():
     assert prefs.is_quiet(time(23, 30)) and prefs.is_quiet(time(6, 59))
     assert not prefs.is_quiet(time(7, 0))
     assert not Prefs(quiet_hours=False).is_quiet(time(3, 0))
+    assert Prefs(sound=False).is_quiet(time(12, 0))
 
 
 def test_prefs_ignore_unknown_and_broken_values():

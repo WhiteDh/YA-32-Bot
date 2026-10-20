@@ -59,3 +59,17 @@ async def test_subject_name_is_a_link(seeded: AppContext):
     assert "Посилання на пару" not in text
     week = week_doc([bundle], Prefs(), today=NOW.date()).classic()
     assert "<a href=" in week
+
+
+async def test_now_shows_only_today(seeded: AppContext):
+    from datetime import datetime
+
+    from ya32_bot.bot.render.schedule import now_doc
+    from ya32_bot.core.timetable import now_status
+
+    tuesday_evening = datetime(2026, 10, 6, 20, 0)
+    wednesday = await _bundle(seeded, WED)
+    status = now_status(tuesday_evening, list(wednesday.day.active))
+    assert status.next is not None  # the core still sees tomorrow…
+    text = now_doc(status, Prefs(), wednesday.subjects, now=tuesday_evening).classic()
+    assert "Далі" not in text and "пар більше немає" in text  # …the screen does not show it

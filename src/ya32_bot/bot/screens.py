@@ -12,7 +12,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ya32_bot.bot.context import AppContext
-from ya32_bot.bot.keyboards.callbacks import Adm, CalCb, DayCb, LessonCb, Nav, WeekCb, d2i
+from ya32_bot.bot.keyboards.callbacks import Adm, CalCb, DayCb, Nav, WeekCb, d2i
 from ya32_bot.bot.keyboards.common import btn, kb, url_btn
 from ya32_bot.bot.render import schedule as render
 from ya32_bot.bot.render.doc import Doc, esc
@@ -87,25 +87,21 @@ async def week_screen(session: AsyncSession, ctx: AppContext, prefs: Prefs, any_
         btn("◀️ Попередній", WeekCb(d=d2i(monday - timedelta(days=7)))),
         btn("Наступний ▶️", WeekCb(d=d2i(monday + timedelta(days=7)))),
     ]
-    extra = [btn("📤 У календар", Nav(to="ics")), btn("🏠 Меню", Nav(to="menu"))]
+    extra = [btn("🏠 Меню", Nav(to="menu"))]
     if monday != monday_of(today):
         extra.insert(0, btn("↩️ Цей тиждень", Nav(to="week")))
     return doc, kb(day_buttons, nav, extra)
 
 
 async def now_screen(session: AsyncSession, ctx: AppContext, prefs: Prefs) -> Screen:
+    """Only today: the pair that is on and the next one today, nothing from tomorrow."""
     now = ctx.now()
-    lessons = await schedule.upcoming_lessons(session, now.date(), horizon=14)
+    lessons = [x for x in await schedule.upcoming_lessons(session, now.date(), horizon=1) if x.date == now.date()]
     status = now_status(now, lessons)
-    breaking = is_break(now, [x for x in lessons if x.date == now.date()])
+    breaking = is_break(now, lessons)
     subjects = await schedule.subjects(session)
     doc = render.now_doc(status, prefs, subjects, now=now, break_left=breaking)
-    rows = [[btn("🔄 Оновити", Nav(to="now")), btn("📅 Сьогодні", Nav(to="today"))]]
-    focus = status.current or status.next
-    if focus is not None:
-        rows.insert(0, [btn("📖 Картка пари", LessonCb(d=d2i(focus.date), s=focus.slot))])
-    rows.append([btn("🏠 Меню", Nav(to="menu"))])
-    return doc, kb(*rows)
+    return doc, kb([btn("🏠 Меню", Nav(to="menu"))])
 
 
 async def lesson_screen(

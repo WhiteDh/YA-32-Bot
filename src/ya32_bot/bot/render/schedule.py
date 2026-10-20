@@ -194,30 +194,18 @@ def now_doc(
             f"{subject_icon(cur, subjects, prefs)}<b>{linked(name, cur, subjects, prefs)}</b>",
             f"{bar(status.progress)}  ще <b>{human_minutes(status.minutes_left)}</b>",
         )
-    nxt = status.next
+    nxt = status.next if status.next is not None and status.next.date == now.date() else None
     if nxt is not None:
         name = esc(subject_name(nxt.subject, subjects, prefs))
-        when = (
-            f"о {nxt.time.start:%H:%M}"
-            if nxt.date == now.date()
-            else f"{human_day(nxt.date).lower()}, {nxt.time.start:%H:%M}"
-        )
-        lines = [
-            f"⏭ <b>Далі: {nxt.slot} пара</b> {esc(when)}",
+        doc.quote(
+            f"⏭ <b>Далі: {nxt.slot} пара</b> о {nxt.time.start:%H:%M}",
             f"{subject_icon(nxt, subjects, prefs)}{linked(name, nxt, subjects, prefs)}",
-        ]
-        if nxt.date == now.date():
-            lines.append(f"⏳ через <b>{human_minutes(status.minutes_to_next)}</b>")
-        doc.quote(*lines)
+            f"⏳ через <b>{human_minutes(status.minutes_to_next)}</b>",
+        )
     if status.current is None and nxt is None:
-        doc.quote("🛋 Найближчим часом пар немає.")
+        doc.quote("🛋 Сьогодні пар більше немає.")
     elif break_left is not None:
         doc.p(f"☕ <i>Перерва, ще {human_minutes(break_left)}.</i>")
-    if status.lessons_left_today:
-        n = status.lessons_left_today
-        doc.p(f"<i>Сьогодні ще {n} {plural(n, 'пара', 'пари', 'пар')}.</i>")
-    elif nxt is not None and nxt.date != now.date():
-        doc.p("<i>На сьогодні все! 🎉</i>")
     return doc
 
 

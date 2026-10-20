@@ -100,13 +100,13 @@ async def test_typed_date_and_day_arrows(dp, bot, fake_session: FakeSession):
 
 
 async def test_settings_toggle_persists(dp, bot, seeded: AppContext):
-    await feed(dp, bot, cb(STUDENT_ID, SetCb(a="tog", k="evening_digest").pack()))
+    await feed(dp, bot, cb(STUDENT_ID, SetCb(a="tog", k="sound").pack()))
     await feed(dp, bot, cb(STUDENT_ID, SetCb(a="tog", k="show_room").pack()))  # view toggles are gone
     async with seeded.db.session() as session:
         student = await session.get(User, STUDENT_ID)
     assert student is not None
     stored = Prefs.load(student.prefs)
-    assert stored.evening_digest is True and stored.show_room is False
+    assert stored.sound is False and stored.show_room is False
 
 
 async def test_student_cannot_use_admin_buttons(dp, bot, fake_session: FakeSession, seeded: AppContext):
