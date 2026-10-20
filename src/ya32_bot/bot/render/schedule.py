@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 
 from ya32_bot.bot.render.doc import Doc, esc
+from ya32_bot.core.links import link_for
 from ya32_bot.core.prefs import Prefs
 from ya32_bot.core.texts_uk import WEEKDAYS_SHORT, human_date, human_day, human_minutes, plural
 from ya32_bot.core.timetable import Lesson, NowStatus
@@ -19,6 +20,18 @@ def subject_name(name: str, subjects: dict[str, Subject], prefs: Prefs) -> str:
     if prefs.short_names and extra and extra.short:
         return extra.short
     return name
+
+
+def lesson_link(lesson: Lesson, subjects: dict[str, Subject]) -> str | None:
+    """Meet / Zoom for this lesson: the semester list first, then the link set in the admin panel."""
+    extra = subjects.get(lesson.subject)
+    return link_for(lesson.subject, lesson.teacher) or (extra.link if extra and extra.link else None)
+
+
+def linked(name: str, lesson: Lesson, subjects: dict[str, Subject], prefs: Prefs) -> str:
+    """``name`` (already escaped) as a hyperlink to the lesson, unless cancelled or links are off."""
+    url = lesson_link(lesson, subjects) if prefs.show_links and not lesson.cancelled else None
+    return f'<a href="{esc(url)}">{name}</a>' if url else name
 
 
 def subject_icon(lesson: Lesson, subjects: dict[str, Subject], prefs: Prefs) -> str:
@@ -58,7 +71,7 @@ def _lesson_lines(
 
     if prefs.compact:
         kind = f" · <i>{esc(lesson.kind.label.lower())}</i>" if prefs.show_kind else ""
-        title = f"<s>{name}</s> ❌" if lesson.cancelled else f"<b>{name}</b>"
+        title = f"<s>{name}</s> ❌" if lesson.cancelled else f"<b>{linked(name, lesson, subj, prefs)}</b>"
         line = f"{head}  {icon}{title}{kind}{marks}"
         if prefs.show_homework and not lesson.cancelled and bundle.homework.get(lesson.subject):
             line += " 📚"
@@ -69,15 +82,12 @@ def _lesson_lines(
         lines.append(f"{icon}<s>{name}</s> — <b>скасовано</b>")
     else:
         kind = f" · <i>{esc(lesson.kind.label)}</i>" if prefs.show_kind else ""
-        lines.append(f"{icon}<b>{name}</b>{kind}")
+        lines.append(f"{icon}<b>{linked(name, lesson, subj, prefs)}</b>{kind}")
         if prefs.show_teacher and lesson.teacher:
             lines.append(f"👤 {esc(lesson.teacher)}")
         if prefs.show_room and lesson.room:
             room = esc(lesson.room)
             lines.append(f'🚪 <a href="{esc(lesson.room_url)}">{room}</a>' if lesson.room_url else f"🚪 {room}")
-        extra = subj.get(lesson.subject)
-        if prefs.show_links and extra and extra.link:
-            lines.append(f'🔗 <a href="{esc(extra.link)}">Посилання на пару</a>')
     if prefs.show_notes and lesson.note:
         lines.append(f"📝 <i>{esc(lesson.note)}</i>")
     if prefs.show_homework and not lesson.cancelled:
@@ -163,7 +173,7 @@ def week_doc(bundles: list[DayBundle], prefs: Prefs, *, today: date) -> Doc:
             name = esc(subject_name(lesson.subject, bundle.subjects, prefs))
             icon = subject_icon(lesson, bundle.subjects, prefs)
             when = f"{lesson.time.start:%H:%M} " if prefs.show_time else ""
-            title = f"<s>{name}</s>" if lesson.cancelled else name
+            title = f"<s>{name}</s>" if lesson.cancelled else linked(name, lesson, bundle.subjects, prefs)
             kind = f" <i>({esc(lesson.kind.label.lower())})</i>" if prefs.show_kind and not prefs.compact else ""
             hw = " 📚" if prefs.show_homework and bundle.homework.get(lesson.subject) and not lesson.cancelled else ""
             changed = " 🔄" if lesson.changed and not lesson.cancelled else ""
@@ -181,7 +191,7 @@ def now_doc(
         name = esc(subject_name(cur.subject, subjects, prefs))
         doc.quote(
             f"▶️ <b>{cur.slot} пара</b> · {cur.time.label}",
-            f"{subject_icon(cur, subjects, prefs)}<b>{name}</b>",
+            f"{subject_icon(cur, subjects, prefs)}<b>{linked(name, cur, subjects, prefs)}</b>",
             f"{bar(status.progress)}  ще <b>{human_minutes(status.minutes_left)}</b>",
         )
     nxt = status.next
@@ -194,7 +204,7 @@ def now_doc(
         )
         lines = [
             f"⏭ <b>Далі: {nxt.slot} пара</b> {esc(when)}",
-            f"{subject_icon(nxt, subjects, prefs)}{name}",
+            f"{subject_icon(nxt, subjects, prefs)}{linked(name, nxt, subjects, prefs)}",
         ]
         if nxt.date == now.date():
             lines.append(f"⏳ через <b>{human_minutes(status.minutes_to_next)}</b>")

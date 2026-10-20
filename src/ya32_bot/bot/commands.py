@@ -25,7 +25,6 @@ COMMANDS = [
     BotCommand(command="nextweek", description="⏭ Наступний тиждень"),
     BotCommand(command="now", description="⏱ Яка пара зараз"),
     BotCommand(command="day", description="📆 Будь-який день: /day 12.10"),
-    BotCommand(command="hw", description="📚 Домашка"),
     BotCommand(command="search", description="🔎 Пошук предмета: /search аналіз"),
     BotCommand(command="ics", description="📤 Розклад у Google/Apple календар"),
     BotCommand(command="settings", description="⚙️ Налаштування"),
@@ -41,11 +40,11 @@ DESCRIPTION = (
     "Розклад групи ЯА-32 (КПІ) 🎓\n\n"
     "📅 Пари на сьогодні, завтра й тиждень\n"
     "⏱ Яка пара зараз і скільки до кінця\n"
-    "📚 Домашка з дедлайнами\n"
+    "🔗 Посилання на пари одним дотиком\n"
     "🔔 Нагадування — налаштовуються під себе\n\n"
     "Тисни «Почати» 👇"
 )
-SHORT_DESCRIPTION = "Розклад ЯА-32: пари, домашка, нагадування 🎓"
+SHORT_DESCRIPTION = "Розклад ЯА-32: пари, посилання, нагадування 🎓"
 
 
 async def publish(bot: Bot, admins: list[User]) -> None:

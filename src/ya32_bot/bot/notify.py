@@ -222,7 +222,7 @@ class Notifier:
                 doc = render_schedule.day_doc(tomorrow_bundle, prefs, today=today, title="🌙 Завтра:")
                 if prefs.notify_deadlines and pending:
                     doc.h("🔥 Здати завтра", 3).quote(*(f"▫️ <b>{esc(h.subject)}</b>" for h in pending))
-                await self.deliver(person, doc, kb([btn("📚 Домашка", HwCb(a="list", s=1))]), prefs=prefs)
+                await self.deliver(person, doc, prefs=prefs)
             elif prefs.notify_deadlines and pending and self._once(person.id, "deadline", today):
                 n = len(pending)
                 doc = (
@@ -231,7 +231,7 @@ class Notifier:
                     .p(f"Не зроблено: {n} {plural(n, 'завдання', 'завдання', 'завдань')}")
                 )
                 doc.quote(*(f"▫️ <b>{esc(h.subject)}</b>" for h in pending))
-                await self.deliver(person, doc, kb([btn("📚 Відкрити", HwCb(a="list", s=1), "success")]), prefs=prefs)
+                await self.deliver(person, doc, prefs=prefs)
 
         if prefs.remind_before:
             for lesson in today_bundle.day.active:
@@ -242,10 +242,10 @@ class Notifier:
                     if prefs.show_room and lesson.room:
                         lines.append(f"🚪 {esc(lesson.room)}")
                     doc = Doc().h(f"⏰ За {prefs.remind_before} хв — {lesson.slot} пара").quote(*lines)
-                    extra = today_bundle.subjects.get(lesson.subject)
+                    link = render_schedule.lesson_link(lesson, today_bundle.subjects)
                     rows = [[btn("📖 Картка пари", LessonCb(d=d2i(today), s=lesson.slot))]]
-                    if extra and extra.link:
-                        rows.insert(0, [url_btn("🔗 Приєднатися", extra.link)])
+                    if link:
+                        rows.insert(0, [url_btn("🔗 Приєднатися", link)])
                     await self.deliver(person, doc, kb(*rows), prefs=prefs)
 
     async def close(self) -> None:

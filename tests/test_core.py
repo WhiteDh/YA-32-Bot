@@ -4,6 +4,7 @@ import pytest
 
 from ya32_bot.bot.handlers.schedule import parse_date
 from ya32_bot.core.calendar import Holiday, Semester, WeekAnchor, monday_of
+from ya32_bot.core.links import link_for
 from ya32_bot.core.prefs import Prefs, apply_preset
 from ya32_bot.core.slots import SLOTS, slot_for_start
 from ya32_bot.core.texts_uk import human_minutes, plural
@@ -99,8 +100,22 @@ def test_prefs_quiet_hours_wrap_midnight():
 
 
 def test_prefs_ignore_unknown_and_broken_values():
-    assert Prefs.load({"nope": 1, "show_room": True}).show_room
+    assert Prefs.load({"nope": 1, "evening_digest": True}).evening_digest
     assert Prefs.load({"remind_before": "abc"}) == Prefs()
+
+
+def test_only_notification_prefs_are_kept():
+    loaded = Prefs.load({"show_room": True, "compact": True, "reply_keyboard": False, "remind_before": 15})
+    assert loaded == Prefs(remind_before=15)
+
+
+def test_lesson_links_by_subject_and_teacher():
+    exp = "Експериментальна та поведінкова економіка"
+    assert link_for(exp, "Капустян Володимир Омелянович") == link_for(exp, "капустян в. о.")
+    assert link_for(exp, "Черноусова Жанна Трохимівна") != link_for(exp, "Капустян Володимир Омелянович")
+    assert link_for(exp, None) is None
+    assert link_for("Інвестиційний аналіз", "Саченко Андрій Олегович") == "https://meet.google.com/jmj-epwq-ajn"
+    assert link_for("Невідомий предмет", None) is None
 
 
 def test_room_is_hidden_by_default_and_presets_only_touch_view():

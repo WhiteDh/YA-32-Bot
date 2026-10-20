@@ -17,7 +17,7 @@ from ya32_bot.bot import ui
 from ya32_bot.bot.context import AppContext
 from ya32_bot.bot.filters import HasRole
 from ya32_bot.bot.keyboards.callbacks import CalCb, HwCb, LessonCb, Nav, d2i, i2d
-from ya32_bot.bot.keyboards.common import BTN_HW, btn, calendar, grid, kb
+from ya32_bot.bot.keyboards.common import BTN_HW, btn, calendar, grid, kb, reply_menu
 from ya32_bot.bot.render import homework as render
 from ya32_bot.bot.render.doc import Doc, esc
 from ya32_bot.bot.states import HwAdd, HwEdit
@@ -58,8 +58,13 @@ async def _list(
     await ui.show(event, doc, kb(*rows), rich=prefs.rich)
 
 
-@router.message(Command("hw"))
 @router.message(F.text == BTN_HW)
+async def msg_old_keyboard(message: Message, user: User) -> None:
+    """The bottom keyboard no longer has this button; a tap on an old copy swaps it for the new one."""
+    await message.answer("⌨️ Кнопки оновлено.", reply_markup=reply_menu(user.role_enum))
+
+
+@router.message(Command("hw"))
 async def msg_list(message: Message, session: AsyncSession, ctx: AppContext, user: User, prefs: Prefs) -> None:
     await _list(message, session, ctx, user, prefs, hide_done=False)
 

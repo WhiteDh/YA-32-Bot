@@ -61,7 +61,7 @@ def reply_menu(role: Role) -> ReplyKeyboardMarkup:
     rows = [
         [KeyboardButton(text=BTN_TODAY), KeyboardButton(text=BTN_TOMORROW)],
         [KeyboardButton(text=BTN_WEEK), KeyboardButton(text=BTN_NOW)],
-        [KeyboardButton(text=BTN_HW), KeyboardButton(text=BTN_SETTINGS)],
+        [KeyboardButton(text=BTN_SETTINGS)],
     ]
     if role.at_least(Role.ADMIN):
         rows.append([KeyboardButton(text=BTN_ADMIN)])

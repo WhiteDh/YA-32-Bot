@@ -12,7 +12,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ya32_bot.bot.context import AppContext
-from ya32_bot.bot.keyboards.callbacks import Adm, CalCb, DayCb, HwCb, LessonCb, Nav, WeekCb, d2i
+from ya32_bot.bot.keyboards.callbacks import Adm, CalCb, DayCb, LessonCb, Nav, WeekCb, d2i
 from ya32_bot.bot.keyboards.common import btn, kb, url_btn
 from ya32_bot.bot.render import schedule as render
 from ya32_bot.bot.render.doc import Doc, esc
@@ -25,22 +25,19 @@ from ya32_bot.services import homework, schedule
 
 Screen = tuple[Doc, InlineKeyboardMarkup]
 
-KEYCAPS = ("0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣")
-
 
 def main_menu(user: User, ctx: AppContext) -> Screen:
     today = ctx.today()
     doc = Doc().h(f"Привіт, {esc(user.first_name or 'друже')}! 👋")
     doc.p(f"<i>{esc(human_day(today))}</i>", "Що подивимось?")
     rows: list[list[InlineKeyboardButton]] = [
-        [btn("📅 Сьогодні", Nav(to="today"), "primary"), btn("➡️ Завтра", Nav(to="tomorrow"), "primary")],
+        [btn("📅 Сьогодні", Nav(to="today")), btn("➡️ Завтра", Nav(to="tomorrow"))],
         [btn("🗓 Цей тиждень", Nav(to="week")), btn("⏭ Наступний", Nav(to="nextweek"))],
         [btn("⏱ Зараз", Nav(to="now")), btn("📆 Календар", CalCb(p="view", y=today.year, m=today.month))],
-        [btn("📚 Домашка", HwCb(a="list"), "success"), btn("⚙️ Налаштування", Nav(to="settings"))],
+        [btn("⚙️ Налаштування", Nav(to="settings"))],
     ]
     if user.role_enum.at_least(Role.ADMIN):
-        rows.append([btn("🛠 Адмінка", Adm(a="menu"), "danger")])
-    rows.append([btn("❓ Допомога", Nav(to="help"))])
+        rows.append([btn("🛠 Адмінка", Adm(a="menu"))])
     return doc, kb(*rows)
 
 
@@ -59,14 +56,6 @@ async def day_screen(
     doc = render.day_doc(bundle, prefs, today=today, now=ctx.now(), title=title)
 
     rows: list[list[InlineKeyboardButton]] = []
-    lessons = [x for x in bundle.day.lessons if prefs.show_cancelled or not x.cancelled]
-    if lessons:
-        rows.append(
-            [
-                btn(KEYCAPS[x.slot] if x.slot < len(KEYCAPS) else str(x.slot), LessonCb(d=d2i(when), s=x.slot))
-                for x in lessons
-            ]
-        )
     prev_day, next_day = when - timedelta(days=1), when + timedelta(days=1)
     rows.append(
         [
@@ -75,18 +64,12 @@ async def day_screen(
             btn(f"{WEEKDAYS_SHORT[next_day.weekday()]} ▶️", DayCb(d=d2i(next_day), step=1)),
         ]
     )
-    third = [btn("🗓 Тиждень", WeekCb(d=d2i(monday_of(when)))), btn("⏱ Зараз", Nav(to="now"))]
+    bottom = [btn("🗓 Тиждень", WeekCb(d=d2i(monday_of(when)))), btn("🏠 Меню", Nav(to="menu"))]
     if when != today:
-        third.insert(0, btn("↩️ Сьогодні", Nav(to="today"), "primary"))
-    rows.append(third)
-    tools: list[InlineKeyboardButton] = []
-    if user.role_enum.at_least(Role.EDITOR) and bundle.day.active:
-        tools.append(btn("📚 + ДЗ", HwCb(a="add", d=d2i(when)), "success"))
+        bottom.insert(0, btn("↩️ Сьогодні", Nav(to="today")))
+    rows.append(bottom)
     if user.role_enum.at_least(Role.ADMIN):
-        tools.append(btn("✏️ Редагувати", Adm(a="day", d=d2i(when)), "danger"))
-    if tools:
-        rows.append(tools)
-    rows.append([btn("🏠 Меню", Nav(to="menu"))])
+        rows.append([btn("✏️ Редагувати", Adm(a="day", d=d2i(when)))])
     return doc, kb(*rows)
 
 
@@ -106,7 +89,7 @@ async def week_screen(session: AsyncSession, ctx: AppContext, prefs: Prefs, any_
     ]
     extra = [btn("📤 У календар", Nav(to="ics")), btn("🏠 Меню", Nav(to="menu"))]
     if monday != monday_of(today):
-        extra.insert(0, btn("↩️ Цей тиждень", Nav(to="week"), "primary"))
+        extra.insert(0, btn("↩️ Цей тиждень", Nav(to="week")))
     return doc, kb(day_buttons, nav, extra)
 
 
@@ -117,7 +100,7 @@ async def now_screen(session: AsyncSession, ctx: AppContext, prefs: Prefs) -> Sc
     breaking = is_break(now, [x for x in lessons if x.date == now.date()])
     subjects = await schedule.subjects(session)
     doc = render.now_doc(status, prefs, subjects, now=now, break_left=breaking)
-    rows = [[btn("🔄 Оновити", Nav(to="now"), "primary"), btn("📅 Сьогодні", Nav(to="today"))]]
+    rows = [[btn("🔄 Оновити", Nav(to="now")), btn("📅 Сьогодні", Nav(to="today"))]]
     focus = status.current or status.next
     if focus is not None:
         rows.insert(0, [btn("📖 Картка пари", LessonCb(d=d2i(focus.date), s=focus.slot))])
@@ -136,21 +119,14 @@ async def lesson_screen(
     doc = render.lesson_doc(lesson, bundle, prefs, hw, now=ctx.now())
     rows: list[list[InlineKeyboardButton]] = []
     links: list[InlineKeyboardButton] = []
-    extra = bundle.subjects.get(lesson.subject)
-    if extra and extra.link:
-        links.append(url_btn("🔗 Посилання", extra.link))
+    link = render.lesson_link(lesson, bundle.subjects)
+    if link:
+        links.append(url_btn("🔗 Приєднатися", link))
     if prefs.show_room and lesson.room_url:
         links.append(url_btn("🗺 Корпус", lesson.room_url))
     if links:
         rows.append(links)
-    if hw:
-        rows.append([btn(f"📚 ДЗ до {h.due_date:%d.%m}", HwCb(a="open", id=h.id)) for h in hw[:3]])
-    tools: list[InlineKeyboardButton] = []
-    if user.role_enum.at_least(Role.EDITOR) and not lesson.cancelled:
-        tools.append(btn("📚 + ДЗ", HwCb(a="pick", d=d2i(when), s=slot), "success"))
     if user.role_enum.at_least(Role.ADMIN):
-        tools.append(btn("✏️ Змінити", Adm(a="slot", d=d2i(when), s=slot), "danger"))
-    if tools:
-        rows.append(tools)
+        rows.append([btn("✏️ Змінити", Adm(a="slot", d=d2i(when), s=slot))])
     rows.append([btn("← До дня", DayCb(d=d2i(when))), btn("🏠 Меню", Nav(to="menu"))])
     return doc, kb(*rows)

@@ -37,17 +37,16 @@ STUDENT_CLICKS = [
     Nav(to="menu"), Nav(to="today"), Nav(to="tomorrow"), Nav(to="week"), Nav(to="nextweek"), Nav(to="now"),
     Nav(to="help"), Nav(to="settings"), Nav(to="ics"), WeekCb(d=D), LessonCb(d=D, s=1), CalCb(p="view", y=Y, m=M),
     CalCb(p="view", y=Y, m=M, d=7), HwCb(a="list"), HwCb(a="list", s=1),
-    SetCb(a="open", k="view"), SetCb(a="open", k="notify"), SetCb(a="open", k="presets"), SetCb(a="open", k="other"),
-    SetCb(a="tog", k="compact", v="view"), SetCb(a="preset", v="full"), SetCb(a="time", k="morning_time"),
-    SetCb(a="time", k="morning_time", v="8"), SetCb(a="timeset", k="morning_time", v="0815"), SetCb(a="remind"),
-    SetCb(a="remindset", v="15"), SetCb(a="preview"), SetCb(a="tog", k="reply_keyboard", v="other"),
+    SetCb(a="open"), SetCb(a="tog", k="evening_digest"), SetCb(a="tog", k="compact"),
+    SetCb(a="time", k="morning_time"), SetCb(a="time", k="morning_time", v="8"),
+    SetCb(a="timeset", k="morning_time", v="0815"), SetCb(a="remind"), SetCb(a="remindset", v="15"),
 ]  # fmt: skip
 
 
 STUDENT_MESSAGES = [
     "/start", "/today", "/tomorrow", "/week", "/nextweek", "/now", "/day 12.10", "/day", "/hw", "/settings",
     "/help", "/menu", "/avatar", "кава", "/42", "/secrets", "/cancel", "щось незрозуміле", "/search аналіз",
-    "/search", "/ics", "економічна",
+    "/search", "/ics", "економічна", "📚 Домашка",
 ]  # fmt: skip
 
 

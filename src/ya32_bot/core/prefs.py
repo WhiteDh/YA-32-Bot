@@ -56,8 +56,10 @@ class Prefs(BaseModel):
 
     @classmethod
     def load(cls, raw: dict[str, Any] | None) -> Prefs:
+        """Only notification settings are personal; the look is the same for everyone."""
+        kept = {k: v for k, v in (raw or {}).items() if k in NOTIFY_FIELDS}
         try:
-            return cls.model_validate(raw or {})
+            return cls.model_validate(kept)
         except ValueError:
             return cls()
 
@@ -96,9 +98,14 @@ NOTIFY_TOGGLES: tuple[tuple[str, str], ...] = (
     ("morning_digest", "🌅 Ранковий розклад"),
     ("evening_digest", "🌙 Вечірній — на завтра"),
     ("notify_changes", "🔔 Зміни в розкладі"),
-    ("notify_homework", "📚 Нова домашка"),
-    ("notify_deadlines", "🔥 Дедлайни на завтра"),
     ("quiet_hours", "🤫 Тихі години (без звуку)"),
+)
+
+# Everything a user can still change. Stored values of any other field are ignored on load,
+# so people who tuned the view earlier get the default look back.
+NOTIFY_FIELDS = frozenset(
+    {key for key, _ in NOTIFY_TOGGLES}
+    | {"morning_time", "evening_time", "remind_before", "quiet_from", "quiet_to", "notify_homework", "notify_deadlines"}
 )
 
 OTHER_TOGGLES: tuple[tuple[str, str], ...] = (

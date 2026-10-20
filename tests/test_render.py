@@ -50,3 +50,12 @@ def test_doc_serialisers():
     doc = Doc().h("Title").p("a", "b").quote("q1", "q2", expandable=True)
     assert doc.classic() == "<b>Title</b>\n\na\nb\n\n<blockquote expandable>q1\nq2</blockquote>"
     assert doc.rich() == "<h1>Title</h1><p>a<br/>b</p><blockquote>q1<br/>q2</blockquote>"
+
+
+async def test_subject_name_is_a_link(seeded: AppContext):
+    bundle = await _bundle(seeded, WED)
+    text = day_doc(bundle, Prefs(), today=NOW.date()).classic()
+    assert '<a href="https://us04web.zoom.us/j/9026286574' in text  # Черноусова, practice
+    assert "Посилання на пару" not in text
+    week = week_doc([bundle], Prefs(), today=NOW.date()).classic()
+    assert "<a href=" in week
