@@ -20,10 +20,12 @@ async def _people(ctx: AppContext, *prefs: Prefs) -> None:
 
 
 async def test_morning_digest_once_and_only_for_subscribers(seeded: AppContext, bot: Bot, fake_session: FakeSession):
-    await _people(seeded, Prefs(morning_time="07:30", remind_before=0), Prefs(morning_digest=False, remind_before=0))
+    await _people(seeded, Prefs(remind_before=10), Prefs(morning_digest=False, remind_before=0))
     notifier = Notifier(bot, seeded)
-    await notifier.tick(datetime(2026, 10, 5, 7, 30))
-    await notifier.tick(datetime(2026, 10, 5, 7, 30))
+    await notifier.tick(datetime(2026, 10, 5, 7, 30))  # the old fixed time — nothing now
+    assert not fake_session.of("SendRichMessage")
+    await notifier.tick(datetime(2026, 10, 5, 8, 20))  # first pair at 08:30
+    await notifier.tick(datetime(2026, 10, 5, 8, 20))
     sent = fake_session.of("SendRichMessage")
     assert [m.chat_id for m in sent] == [1]  # type: ignore[attr-defined]
     assert "Доброго ранку" in sent[0].rich_message.html  # type: ignore[attr-defined]

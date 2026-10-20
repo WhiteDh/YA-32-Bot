@@ -24,11 +24,14 @@ def root_screen(prefs: Prefs) -> tuple[Doc, InlineKeyboardMarkup]:
     remind = f"за {prefs.remind_before} хв" if prefs.remind_before else "вимкнено"
     doc.quote(
         f"Звук: <b>{'увімкнено' if prefs.sound else 'вимкнено'}</b>",
+        f"Ранковий розклад: <b>{'за 10 хв до першої пари' if prefs.morning_digest else 'вимкнено'}</b>",
         f"Нагадування про пару: <b>{remind}</b>",
     )
     sound = "🔕 Вимкнути звук" if prefs.sound else "🔔 Увімкнути звук"
+    morning = "🌅 Вимкнути ранковий розклад" if prefs.morning_digest else "🌅 Увімкнути ранковий розклад"
     markup = kb(
         [btn(sound, SetCb(a="tog", k="sound"))],
+        [btn(morning, SetCb(a="tog", k="morning_digest"))],
         [btn(f"⏰ Нагадування: {remind}", SetCb(a="remind"))],
         [btn("🏠 Меню", Nav(to="menu"))],
     )

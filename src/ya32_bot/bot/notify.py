@@ -36,6 +36,15 @@ CHANGE_HORIZON = 7  # only changes within the next week are worth a ping
 SEND_PAUSE = 0.05  # ~20 messages/s, well under Telegram's limits
 
 
+MORNING_LEAD = 10  # the morning schedule arrives this many minutes before the day's first pair
+
+
+def morning_digest_at(bundle: schedule.DayBundle) -> str | None:
+    """``HH:MM`` of the morning schedule for this day, or ``None`` on a day without pairs."""
+    start = min((x.starts_at() for x in bundle.day.active), default=None)
+    return None if start is None else f"{start - timedelta(minutes=MORNING_LEAD):%H:%M}"
+
+
 class Notifier:
     def __init__(self, bot: Bot, ctx: AppContext) -> None:
         self.bot = bot
@@ -209,12 +218,11 @@ class Notifier:
         tomorrow_bundle: schedule.DayBundle, due_tomorrow: list[Homework], done_by_user: dict[int, set[int]],
     ) -> None:  # fmt: skip
         today = now.date()
-        morning = prefs.morning_digest and hhmm == prefs.morning_time and today_bundle.day.active
-        if morning and self._once(person.id, "morning", today):
+        # The digest already says what is first, so a pair reminder due the same minute is skipped.
+        digest_at = morning_digest_at(today_bundle) if prefs.morning_digest else None
+        if digest_at is not None and hhmm == digest_at and self._once(person.id, "morning", today):
             doc = render_schedule.day_doc(today_bundle, prefs, today=today, title="☀️ Доброго ранку! Сьогодні:")
-            await self.deliver(
-                person, doc, kb([btn("⏱ Зараз", Nav(to="now")), btn("🗓 Тиждень", Nav(to="week"))]), prefs=prefs
-            )
+            await self.deliver(person, doc, kb([btn("🏠 Меню", Nav(to="menu"))]), prefs=prefs)
 
         pending = [h for h in due_tomorrow if h.id not in done_by_user.get(person.id, set())]
         if hhmm == prefs.evening_time:
@@ -233,7 +241,7 @@ class Notifier:
                 doc.quote(*(f"▫️ <b>{esc(h.subject)}</b>" for h in pending))
                 await self.deliver(person, doc, prefs=prefs)
 
-        if prefs.remind_before:
+        if prefs.remind_before and hhmm != digest_at:
             for lesson in today_bundle.day.active:
                 at = lesson.starts_at() - timedelta(minutes=prefs.remind_before)
                 if f"{at:%H:%M}" == hhmm and self._once(person.id, f"remind:{lesson.slot}", today):

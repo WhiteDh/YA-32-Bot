@@ -39,8 +39,8 @@ class Prefs(BaseModel):
 
     # ── Сповіщення ────────────────────────────────────────────────────────
     sound: bool = True  # off = every notification arrives silently
-    morning_digest: bool = True
-    morning_time: str = "07:30"
+    morning_digest: bool = True  # 10 minutes before the first pair of the day
+    morning_time: str = "07:30"  # unused since the digest follows the first pair; kept for old rows
     evening_digest: bool = False
     evening_time: str = "20:00"
     remind_before: int = Field(default=10, ge=0, le=180)
@@ -97,7 +97,10 @@ VIEW_TOGGLES: tuple[tuple[str, str], ...] = (
     ("rich", "✨ Новий вигляд"),
 )
 
-NOTIFY_TOGGLES: tuple[tuple[str, str], ...] = (("sound", "🔔 Звук сповіщень"),)
+NOTIFY_TOGGLES: tuple[tuple[str, str], ...] = (
+    ("sound", "🔔 Звук сповіщень"),
+    ("morning_digest", "🌅 Ранковий розклад"),
+)
 
 # Notification values kept from the database. The settings screen only changes sound and the
 # reminder; the rest keep whatever was stored earlier. Any other field (the look) is ignored on load.
