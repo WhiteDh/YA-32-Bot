@@ -15,15 +15,20 @@ logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parents[3]
 
 
+def _ensure_sqlite_dir(url: str) -> None:
+    """SQLite creates the file but not its folder (``./data`` on a fresh clone)."""
+    parsed = make_url(url)
+    if parsed.get_backend_name() == "sqlite" and parsed.database and parsed.database != ":memory:":
+        Path(parsed.database).parent.mkdir(parents=True, exist_ok=True)
+
+
 class Database:
     def __init__(self, url: str, *, echo: bool = False) -> None:
         self.url = url
         parsed = make_url(url)
         kwargs: dict[str, object] = {"echo": echo, "pool_pre_ping": True}
         if parsed.get_backend_name() == "sqlite":
-            database = parsed.database
-            if database and database != ":memory:":
-                Path(database).parent.mkdir(parents=True, exist_ok=True)
+            _ensure_sqlite_dir(url)
         else:
             # The bot is used rarely: a tiny pool, recycled before Postgres idles it out.
             kwargs.update(pool_size=3, max_overflow=2, pool_recycle=1800)
@@ -61,4 +66,5 @@ def _upgrade(url: str) -> None:
 async def migrate(url: str) -> None:
     """``alembic upgrade head`` in a worker thread (env.py runs its own event loop)."""
     logger.info("applying migrations")
+    _ensure_sqlite_dir(url)  # migrations open the database before Database() would create the folder
     await asyncio.to_thread(_upgrade, url)
