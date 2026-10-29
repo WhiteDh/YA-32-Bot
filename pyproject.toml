@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ya32-bot"
-version = "1.0.0"
+version = "1.1.0"
 description = "Розклад групи ЯА-32 (КПІ) у Telegram: розклад, домашка, нагадування, синхронізація з schedule.kpi.ua."
 authors = ["YA-32"]
 readme = "README.md"

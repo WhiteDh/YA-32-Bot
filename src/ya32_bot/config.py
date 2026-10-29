@@ -16,7 +16,7 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    version: str = "1.0.0"
+    version: str = "1.1.0"
 
     bot_token: SecretStr = SecretStr("")
     # Telegram ids that are always owners (comma-separated in the env).
