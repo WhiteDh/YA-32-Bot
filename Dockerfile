@@ -1,4 +1,4 @@
-FROM python:3.13-slim AS build
+FROM python:3.15-slim AS build
 
 WORKDIR /app
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -13,7 +13,7 @@ RUN poetry export --without dev --format requirements.txt --output requirements.
     && pip install --ignore-installed --prefix=/install -r requirements.txt
 
 
-FROM python:3.13-slim
+FROM python:3.15-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
